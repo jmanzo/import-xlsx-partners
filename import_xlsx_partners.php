@@ -19,29 +19,30 @@ class IXLSXFilesPartnerships
 	/**
 	 * Save posts
 	 */
-	private function saveCustomPostType($postarr) {
+	private function saveCustomPostType($postarr)
+	{ 
 		foreach($postarr as $value) {
 			$item_categories = explode(', ', $value['Expertise']);
 			$item_locations = $value['Region'];
-
-			$post = array(
+			$postdata = array(
 				'post_title'    => wp_strip_all_tags( $value['AccountNameLegalName'] ),
 				'post_content'  => $value['PartnerWebsiteDescription'],
-				'post_status'   => 'draft',
+				'post_status'   => 'publish',
 				'post_type'		=> 'item',
-				'post_author'   => get_current_user_id(),
 				'meta_input' 	=> array(
 					'jv_item_address' => $value['PhysicalStreet'],
 					'jv_item_phone'	=> $value['Phone'],
 					'jv_item_email' => $value['Phone'],
 					'jv_item_website' => $value['Website'],
 					'jv_item_lat' => $value['GeocodeLatitude'],
-					'jv_item_lng' => $value['GeocodeLongitude'],
-
+					'jv_item_lng' => $value['GeocodeLongitude']
 				)
 			);
 
-			$post_id = wp_insert_post( $post );
+			// Save partners in the recursive way to avoid infinite loop
+			remove_action('save_post', 'saveCustomPostType');
+			$post_id = wp_insert_post( $postdata );
+			add_action( 'save_post', 'saveCustomPostType' );
 
 			wp_set_object_terms($post_id, $item_categories, 'item_category', true);
 			wp_set_object_terms($post_id, $item_locations, 'item_location', true);
@@ -53,7 +54,8 @@ class IXLSXFilesPartnerships
 	/**
 	 *	File extension validator
 	 */
-	private function validateXlsx($file_ext) {
+	private function validateXlsx($file_ext) 
+	{
 		if ( $file_ext == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ) {
 			return true;
 		}
@@ -63,11 +65,12 @@ class IXLSXFilesPartnerships
 	/**
 	*	Main functionality and front
 	*/
-	public function main() {
+	public function main() 
+	{
 		if ($_FILES) {
 			$validator = $this->validateXlsx($_FILES['xlsx_import']['type']);
 			
-			if ($validator) {*/
+			if ($validator) {
 				$file = $_FILES['xlsx_import']['tmp_name'];
 				//$file = __DIR__ . '/example-file.xlsx';
 				$xlsx = new SimpleXLSX($file);
@@ -84,7 +87,7 @@ class IXLSXFilesPartnerships
 							$arrayFields[$j][$key] = $data[$index][$i];
 						}
 					}
-
+			
 					if ($this->saveCustomPostType($arrayFields)) {
 						$this->success = "File imported successfully.";
 					} else {
@@ -131,7 +134,8 @@ class IXLSXFilesPartnerships
 	}
 }
 
-function ixlsx_admin_actions() {  
+function ixlsx_admin_actions() 
+{  
 	$plugin = new IXLSXFilesPartnerships;
     add_management_page("Import Partners", "Import XLSX Files","manage_options","import_xlsx_partners", array($plugin, 'main'));  
 }  
