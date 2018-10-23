@@ -17,38 +17,64 @@ class IXLSXFilesPartnerships
 	private $filename = '';
 
 	/**
+	 * Post existence validation
+	 */
+	private function postExistValidation($slug)
+	{
+		$args_posts = array(
+			'post_type'      => 'item',
+			'post_status'    => 'any',
+			'name'           => $slug,
+			'posts_per_page' => 1,
+		);
+		$loop_posts = new WP_Query( $args_posts );
+
+		if ( ! $loop_posts->have_posts() ) {
+			return false;
+		} else {
+			$loop_posts->the_post();
+			return $loop_posts->post->ID;
+		}
+	}
+
+	/**
 	 * Save posts
 	 */
 	private function saveCustomPostType($postarr)
-	{ 
+	{
 		foreach($postarr as $value) {
+			$post_slug = strtolower($value['AccountNameLegalName']);
+			$post_slug = str_replace(' ', '-', $post_slug);
 			$item_categories = explode(', ', $value['Expertise']);
 			$item_locations = $value['Region'];
-			$postdata = array(
-				'post_title'    => wp_strip_all_tags( $value['AccountNameLegalName'] ),
-				'post_content'  => $value['PartnerWebsiteDescription'],
-				'post_status'   => 'publish',
-				'post_type'		=> 'item',
-				'meta_input' 	=> array(
-					'jv_item_address' => $value['PhysicalStreet'],
-					'jv_item_phone'	=> $value['Phone'],
-					'jv_item_email' => $value['Phone'],
-					'jv_item_website' => $value['Website'],
-					'jv_item_lat' => $value['GeocodeLatitude'],
-					'jv_item_lng' => $value['GeocodeLongitude']
-				)
-			);
-
-			// Save partners in the recursive way to avoid infinite loop
-			remove_action('save_post', 'saveCustomPostType');
-			$post_id = wp_insert_post( $postdata );
-			add_action( 'save_post', 'saveCustomPostType' );
-
-			wp_set_object_terms($post_id, $item_categories, 'item_category', true);
-			wp_set_object_terms($post_id, $item_locations, 'item_location', true);
-		}
-
-		return true;
+			$post_tags = $value['PhysicalCity'];
+			
+			if(false === $this->postExistValidation($post_slug)) {
+				$postdata = array(
+					'post_title'    => wp_strip_all_tags( $value['AccountNameLegalName'] ),
+					'post_content'  => wp_strip_all_tags( $value['PartnerWebsiteDescription'] ),
+					'post_status'   => 'publish',
+					'post_type'		=> 'item',
+					'meta_input' 	=> array(
+						'jv_item_address' => $value['PhysicalStreet'],
+						'jv_item_phone'	=> $value['Phone'],
+						'jv_item_email' => $value['Phone'],
+						'jv_item_website' => $value['Website'],
+						'jv_item_lat' => $value['GeocodeLatitude'],
+						'jv_item_lng' => $value['GeocodeLongitude']
+					)
+				);
+	
+				// Save partners in the recursive way to avoid infinite loop
+				remove_action('save_post', 'saveCustomPostType');
+				$post_id = wp_insert_post( $postdata );
+				add_action( 'save_post', 'saveCustomPostType' );
+	
+				wp_set_object_terms($post_id, $item_categories, 'item_category', true);
+				wp_set_object_terms($post_id, $item_locations, 'item_location', true);
+				wp_set_object_terms($post_id, $post_tags, 'post_tag', true);
+			}
+		}		
 	}
 
 	/**
@@ -72,7 +98,6 @@ class IXLSXFilesPartnerships
 			
 			if ($validator) {
 				$file = $_FILES['xlsx_import']['tmp_name'];
-				//$file = __DIR__ . '/example-file.xlsx';
 				$xlsx = new SimpleXLSX($file);
 
 				if ( $xlsx->success() ) {
@@ -90,8 +115,6 @@ class IXLSXFilesPartnerships
 			
 					if ($this->saveCustomPostType($arrayFields)) {
 						$this->success = "File imported successfully.";
-					} else {
-						$this->error = "Has occurred an error with the process import. Please, contact the administrator.";
 					}
 				} else {
 					echo $xlsx->error();
