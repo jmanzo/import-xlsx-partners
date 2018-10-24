@@ -48,6 +48,11 @@ class IXLSXFilesPartnerships
 			$item_categories = explode(', ', $value['Expertise']);
 			$item_locations = $value['Region'];
 			$post_tags = $value['PhysicalCity'];
+			$hq_or_branch = $value['BranchOffice'] ? 'Branch Office' : 'Headquarter';
+
+			array_push($item_categories, $hq_or_branch);
+
+			//echo "<pre>"; var_dump($item_categories); echo "</pre>"; wp_die();
 			
 			if(false === $this->postExistValidation($post_slug)) {
 				$postdata = array(
