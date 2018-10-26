@@ -45,14 +45,11 @@ class IXLSXFilesPartnerships
 		foreach($postarr as $value) {
 			$post_slug = strtolower($value['AccountNameLegalName']);
 			$post_slug = str_replace(' ', '-', $post_slug);
-			$item_categories = explode(', ', $value['Expertise']);
+			$hq_or_branch = $value['BranchOffice'] ? 'A. Branch Office' : 'A. Headquarter';
+			$temp_cat = $hq_or_branch . ', ' . $value['Expertise'];
+			$item_categories = explode(', ', $temp_cat);
 			$item_locations = $value['Region'];
 			$post_tags = $value['PhysicalCity'];
-			$hq_or_branch = $value['BranchOffice'] ? 'Branch Office' : 'Headquarter';
-
-			array_push($item_categories, $hq_or_branch);
-
-			//echo "<pre>"; var_dump($item_categories); echo "</pre>"; wp_die();
 			
 			if(false === $this->postExistValidation($post_slug)) {
 				$postdata = array(
@@ -169,6 +166,3 @@ function ixlsx_admin_actions()
 }  
   
 add_action('admin_menu', 'ixlsx_admin_actions');
-
-
-
